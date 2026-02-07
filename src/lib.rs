@@ -34,15 +34,21 @@ lazy_static! {
 
 #[no_mangle]
 /// Get the API version supported by this library
-/// Returns: 0x0101 (version 1.1)
+///
+/// # Returns
+/// 0x0101 (version 1.1)
 pub extern "C" fn mu3_io_get_api_version() -> u16 {
     0x0101
 }
 
 #[no_mangle]
 /// Initialize the IO library
-/// This function must be called before any other IO functions
-/// Returns: HResult::Ok on success
+///
+/// This function must be called before any other IO functions.
+/// It attaches to the parent console and loads driver configuration.
+///
+/// # Returns
+/// HResult::Ok on success
 pub extern "C" fn mu3_io_init() -> HResult {
     unsafe {
         let _ = Console::AttachConsole(Console::ATTACH_PARENT_PROCESS);
@@ -59,8 +65,11 @@ pub extern "C" fn mu3_io_init() -> HResult {
 
 #[no_mangle]
 /// Poll all input devices for current state
-/// This should be called regularly to update button and lever states
-/// Returns: HResult::Ok on success
+///
+/// This should be called regularly to update button and lever states.
+///
+/// # Returns
+/// HResult::Ok on success
 pub extern "C" fn mu3_io_poll() -> HResult {
     let mut drivers = DRIVERS.write().unwrap();
     drivers.poll();
@@ -110,7 +119,9 @@ pub extern "C" fn mu3_io_get_lever(pos: *mut i16) {
 
 #[no_mangle]
 /// Initialize LED support
-/// Returns: HResult::Ok on success
+///
+/// # Returns
+/// HResult::Ok on success
 pub extern "C" fn mu3_io_led_init() -> HResult {
     HResult::Ok
 }

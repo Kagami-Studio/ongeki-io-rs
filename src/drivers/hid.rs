@@ -161,7 +161,13 @@ pub(crate) fn map(x: i32, in_min: i32, in_max: i32, out_min: i32, out_max: i32) 
 }
 
 /// Helper function to extract bit from data and convert to LED brightness
-/// Extracts a specific bit from the data and returns 255 if bit is 1, 0 otherwise
+///
+/// # Arguments
+/// * `data` - 32-bit LED state data
+/// * `bit_position` - Position of the bit to extract
+///
+/// # Returns
+/// 255 if the bit is set, 0 otherwise
 fn extract_led_bit(data: u32, bit_position: u32) -> u8 {
     if (data >> bit_position) & 1 == 1 {
         255
@@ -232,7 +238,11 @@ impl LEDriverNew for HidIO {
     
             // Validate we have enough RGB data
             if rgb.len() < LED_COUNT_BOARD_1 {
-                eprintln!("Ongeki IO HID: 警告 - RGB 数据不足，期望 {} 个，实际 {}", LED_COUNT_BOARD_1, rgb.len());
+                eprintln!(
+                    "Ongeki IO HID: Warning - Insufficient RGB LED data. Expected {} LEDs, got {}",
+                    LED_COUNT_BOARD_1,
+                    rgb.len()
+                );
                 return;
             }
 

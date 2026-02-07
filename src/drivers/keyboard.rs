@@ -28,11 +28,20 @@ impl KeyBoardIO {
 impl Driver for KeyBoardIO {}
 
 /// Helper function to check if a key is pressed
+///
+/// # Safety
+/// This function calls Windows API GetAsyncKeyState which is safe to call
+/// with any virtual key code. The function properly handles the return value.
 fn is_key_pressed(key: i32) -> bool {
     unsafe { KeyboardAndMouse::GetAsyncKeyState(key) != 0 }
 }
 
 /// Helper function to set button state based on key press
+///
+/// # Arguments
+/// * `buttons` - Mutable reference to button state bitmap
+/// * `key` - Virtual key code to check
+/// * `button_flag` - Button flag to set if key is pressed
 fn set_button_if_pressed(buttons: &mut u8, key: i32, button_flag: u8) {
     if is_key_pressed(key) {
         *buttons |= button_flag;

@@ -7,8 +7,9 @@ use crate::enums::HResult;
 
 use super::hid;
 
-// Lever range constants
+/// Lever range minimum value
 const LEVER_MIN: i32 = -32768;
+/// Lever range maximum value
 const LEVER_MAX: i32 = 32768;
 
 #[derive(Debug, Default)]
