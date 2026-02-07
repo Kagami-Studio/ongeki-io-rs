@@ -2,6 +2,11 @@ use super::{Driver, LEDriver, LEDriverNew};
 
 use dyn_dyn::dyn_dyn_impl;
 
+/// LED bit positions for debugging output
+const LED_BIT_POSITIONS: [u32; 18] = [
+    23, 19, 22, 20, 21, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,
+];
+
 #[derive(Debug, Default)]
 pub struct LEDebug;
 
@@ -16,27 +21,16 @@ impl Driver for LEDebug {}
 
 impl LEDriver for LEDebug {
     fn set_led(&mut self, data: u32) {
-        println!(
-            "Ongeki IO: Set LED\n{} {} {}, {} {} {}, {} {} {}, {} {} {}, {} {} {}, {} {} {}",
-            ((data >> 23) & 1) * 255,
-            ((data >> 19) & 1) * 255,
-            ((data >> 22) & 1) * 255,
-            ((data >> 20) & 1) * 255,
-            ((data >> 21) & 1) * 255,
-            ((data >> 18) & 1) * 255,
-            ((data >> 17) & 1) * 255,
-            ((data >> 16) & 1) * 255,
-            ((data >> 15) & 1) * 255,
-            ((data >> 14) & 1) * 255,
-            ((data >> 13) & 1) * 255,
-            ((data >> 12) & 1) * 255,
-            ((data >> 11) & 1) * 255,
-            ((data >> 10) & 1) * 255,
-            ((data >> 9) & 1) * 255,
-            ((data >> 8) & 1) * 255,
-            ((data >> 7) & 1) * 255,
-            ((data >> 6) & 1) * 255
-        );
+        print!("Ongeki IO: Set LED\n");
+        for (i, &pos) in LED_BIT_POSITIONS.iter().enumerate() {
+            let value = if (data >> pos) & 1 == 1 { 255 } else { 0 };
+            print!("{} ", value);
+            // Add comma separator after each RGB triplet (3 values), except after the last one
+            if (i + 1) % 3 == 0 && i + 1 < LED_BIT_POSITIONS.len() {
+                print!(", ");
+            }
+        }
+        println!();
     }
 }
 

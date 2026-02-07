@@ -1,3 +1,19 @@
+//! # Ongeki IO Library
+//!
+//! This library provides an IO interface for ONGEKI arcade game controllers,
+//! compatible with segatools. It supports multiple input drivers (keyboard, mouse, HID)
+//! and LED output for controller feedback.
+//!
+//! ## Supported Drivers
+//! - **Keyboard**: Maps keyboard keys to game buttons
+//! - **Mouse**: Maps mouse X position to lever position
+//! - **HID**: Support for custom HID controllers
+//! - **LED Debug**: Console output for LED debugging
+//!
+//! ## Configuration
+//! Configuration is loaded from `ongeki-io.toml` in the working directory.
+//! If the file doesn't exist, a default configuration is created.
+
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 use drivers::Drivers;
@@ -17,11 +33,22 @@ lazy_static! {
 }
 
 #[no_mangle]
+/// Get the API version supported by this library
+///
+/// # Returns
+/// 0x0101 (version 1.1)
 pub extern "C" fn mu3_io_get_api_version() -> u16 {
     0x0101
 }
 
 #[no_mangle]
+/// Initialize the IO library
+///
+/// This function must be called before any other IO functions.
+/// It attaches to the parent console and loads driver configuration.
+///
+/// # Returns
+/// HResult::Ok on success
 pub extern "C" fn mu3_io_init() -> HResult {
     unsafe {
         let _ = Console::AttachConsole(Console::ATTACH_PARENT_PROCESS);
@@ -37,6 +64,12 @@ pub extern "C" fn mu3_io_init() -> HResult {
 }
 
 #[no_mangle]
+/// Poll all input devices for current state
+///
+/// This should be called regularly to update button and lever states.
+///
+/// # Returns
+/// HResult::Ok on success
 pub extern "C" fn mu3_io_poll() -> HResult {
     let mut drivers = DRIVERS.write().unwrap();
     drivers.poll();
@@ -45,6 +78,10 @@ pub extern "C" fn mu3_io_poll() -> HResult {
 }
 
 #[no_mangle]
+/// Get the state of operator buttons (test, service, coin)
+///
+/// # Arguments
+/// * `option_btns` - Pointer to u8 that will receive the button state bitmap
 pub extern "C" fn mu3_io_get_opbtns(option_btns: *mut u8) {
     let drivers = DRIVERS.read().unwrap();
     if !option_btns.is_null() {
@@ -53,6 +90,11 @@ pub extern "C" fn mu3_io_get_opbtns(option_btns: *mut u8) {
 }
 
 #[no_mangle]
+/// Get the state of game buttons for both sides
+///
+/// # Arguments
+/// * `left` - Pointer to u8 that will receive the left side button state
+/// * `right` - Pointer to u8 that will receive the right side button state
 pub extern "C" fn mu3_io_get_gamebtns(left: *mut u8, right: *mut u8) {
     let drivers = DRIVERS.read().unwrap();
     if !left.is_null() {
@@ -64,6 +106,10 @@ pub extern "C" fn mu3_io_get_gamebtns(left: *mut u8, right: *mut u8) {
 }
 
 #[no_mangle]
+/// Get the current lever position
+///
+/// # Arguments
+/// * `pos` - Pointer to i16 that will receive the lever position (-32768 to 32767)
 pub extern "C" fn mu3_io_get_lever(pos: *mut i16) {
     let drivers = DRIVERS.read().unwrap();
     if !pos.is_null() {
@@ -72,11 +118,19 @@ pub extern "C" fn mu3_io_get_lever(pos: *mut i16) {
 }
 
 #[no_mangle]
+/// Initialize LED support
+///
+/// # Returns
+/// HResult::Ok on success
 pub extern "C" fn mu3_io_led_init() -> HResult {
     HResult::Ok
 }
 
 #[no_mangle]
+/// Set LED state using legacy bit-field format
+///
+/// # Arguments
+/// * `data` - 32-bit value containing LED on/off states
 pub extern "C" fn mu3_io_set_led(data: u32) {
     let mut drivers = DRIVERS.write().unwrap();
     drivers.set_led(data);

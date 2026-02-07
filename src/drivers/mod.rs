@@ -1,3 +1,8 @@
+//! Driver management module
+//!
+//! This module provides a unified interface for managing multiple input/output drivers.
+//! Drivers are loaded based on configuration and polled together.
+
 use dyn_dyn::{dyn_dyn_base, dyn_dyn_cast};
 use std::fs::{self, File};
 use std::io::Write;
@@ -52,17 +57,7 @@ impl Drivers {
 
     pub fn init(&mut self) {
         const CONFIG_PATH: &str = "ongeki-io.toml";
-        let mut config = Config::default();
-
-        if let Ok(s) = fs::read_to_string(CONFIG_PATH) {
-            config = toml::from_str(&s).unwrap();
-            println!("Ongeki IO: 使用配置文件\n{:#?}", config);
-        } else {
-            let mut f = File::create(CONFIG_PATH).unwrap();
-            f.write_all(toml::to_string_pretty(&config).unwrap().as_bytes())
-                .unwrap();
-            println!("Ongeki IO: 未发现配置文件，使用默认配置\n{:#?}", config);
-        }
+        let config = Self::load_or_create_config(CONFIG_PATH);
 
         if config.keyboard.enabled {
             self.0
@@ -77,6 +72,40 @@ impl Drivers {
         if config.hid.enabled {
             self.0.push(Box::new(HidIO::new(config.hid.clone())));
         }
+    }
+
+    /// Load configuration from file or create a default one
+    fn load_or_create_config(path: &str) -> Config {
+        match fs::read_to_string(path) {
+            Ok(content) => {
+                match toml::from_str(&content) {
+                    Ok(config) => {
+                        println!("Ongeki IO: 使用配置文件\n{:#?}", config);
+                        config
+                    }
+                    Err(e) => {
+                        eprintln!("Ongeki IO: 配置文件解析失败: {}, 使用默认配置", e);
+                        Self::create_default_config(path)
+                    }
+                }
+            }
+            Err(_) => {
+                println!("Ongeki IO: 未发现配置文件，创建默认配置");
+                Self::create_default_config(path)
+            }
+        }
+    }
+
+    /// Create and save a default configuration file
+    fn create_default_config(path: &str) -> Config {
+        let config = Config::default();
+        if let Ok(toml_string) = toml::to_string_pretty(&config) {
+            if let Ok(mut f) = File::create(path) {
+                let _ = f.write_all(toml_string.as_bytes());
+            }
+        }
+        println!("Ongeki IO: 使用默认配置\n{:#?}", config);
+        config
     }
 
     pub fn poll(&mut self) {

@@ -11,6 +11,13 @@ use byteorder::WriteBytesExt;
 use dyn_dyn::dyn_dyn_impl;
 use hidapi::{HidApi, HidDevice};
 
+// HID buffer and data constants
+const HID_BUFFER_SIZE: usize = 64;
+const HID_REPORT_SIZE: usize = 65;
+const LED_REPORT_ID: u8 = 0;
+const LED_COMMAND: u8 = 100;
+const LED_COUNT_BOARD_1: usize = 6;
+
 pub struct HidIO {
     lever: i16,
     left_btns: u8,
@@ -63,7 +70,7 @@ impl PollDriver for HidIO {
             return HResult::Ok;
         };
 
-        let mut data = [0u8; 64];
+        let mut data = [0u8; HID_BUFFER_SIZE];
         self.left_btns = 0;
         self.right_btns = 0;
         if let Err(e) = device.read(&mut data) {
@@ -72,36 +79,34 @@ impl PollDriver for HidIO {
             return HResult::Ok;
         }
 
-        if data[0] == 1 {
-            self.left_btns |= GameBtn::Btn1 as u8
-        }
-        if data[1] == 1 {
-            self.left_btns |= GameBtn::Btn2 as u8
-        }
-        if data[2] == 1 {
-            self.left_btns |= GameBtn::Btn3 as u8
-        }
-        if data[3] == 1 {
-            self.left_btns |= GameBtn::Side as u8
-        }
-        if data[4] == 1 {
-            self.left_btns |= GameBtn::Menu as u8
+        // Map button data to left buttons
+        const LEFT_BTN_MAP: [(usize, GameBtn); 5] = [
+            (0, GameBtn::Btn1),
+            (1, GameBtn::Btn2),
+            (2, GameBtn::Btn3),
+            (3, GameBtn::Side),
+            (4, GameBtn::Menu),
+        ];
+        
+        for (idx, btn) in LEFT_BTN_MAP {
+            if data[idx] == 1 {
+                self.left_btns |= btn as u8;
+            }
         }
 
-        if data[5] == 1 {
-            self.right_btns |= GameBtn::Btn1 as u8
-        }
-        if data[6] == 1 {
-            self.right_btns |= GameBtn::Btn2 as u8
-        }
-        if data[7] == 1 {
-            self.right_btns |= GameBtn::Btn3 as u8
-        }
-        if data[8] == 1 {
-            self.right_btns |= GameBtn::Side as u8
-        }
-        if data[9] == 1 {
-            self.right_btns |= GameBtn::Menu as u8
+        // Map button data to right buttons
+        const RIGHT_BTN_MAP: [(usize, GameBtn); 5] = [
+            (5, GameBtn::Btn1),
+            (6, GameBtn::Btn2),
+            (7, GameBtn::Btn3),
+            (8, GameBtn::Side),
+            (9, GameBtn::Menu),
+        ];
+        
+        for (idx, btn) in RIGHT_BTN_MAP {
+            if data[idx] == 1 {
+                self.right_btns |= btn as u8;
+            }
         }
 
         // self.lever = -20 * i16::from_be_bytes([data[10], data[11]]);
@@ -155,6 +160,27 @@ pub(crate) fn map(x: i32, in_min: i32, in_max: i32, out_min: i32, out_max: i32) 
     numerator / denominator + out_min
 }
 
+/// Helper function to extract bit from data and convert to LED brightness
+///
+/// # Arguments
+/// * `data` - 32-bit LED state data
+/// * `bit_position` - Position of the bit to extract
+///
+/// # Returns
+/// 255 if the bit is set, 0 otherwise
+fn extract_led_bit(data: u32, bit_position: u32) -> u8 {
+    if (data >> bit_position) & 1 == 1 {
+        255
+    } else {
+        0
+    }
+}
+
+/// LED bit positions for buttons (from MSB to LSB)
+const LED_BIT_POSITIONS: [u32; 18] = [
+    23, 19, 22, 20, 21, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,
+];
+
 impl LeverDriver for HidIO {
     fn lever(&self) -> i16 {
         self.lever
@@ -182,31 +208,17 @@ impl LEDriver for HidIO {
             return;
         };
 
-        let mut buf = Cursor::new([0u8; 65]);
+        let mut buf = Cursor::new([0u8; HID_REPORT_SIZE]);
         buf.set_position(1);
-        buf.write_u8(0).unwrap();
-        buf.write_u8(100).unwrap();
-        buf.write_all(&[
-            (((data >> 23) & 1) * 255) as u8,
-            (((data >> 19) & 1) * 255) as u8,
-            (((data >> 22) & 1) * 255) as u8,
-            (((data >> 20) & 1) * 255) as u8,
-            (((data >> 21) & 1) * 255) as u8,
-            (((data >> 18) & 1) * 255) as u8,
-            (((data >> 17) & 1) * 255) as u8,
-            (((data >> 16) & 1) * 255) as u8,
-            (((data >> 15) & 1) * 255) as u8,
-            (((data >> 14) & 1) * 255) as u8,
-            (((data >> 13) & 1) * 255) as u8,
-            (((data >> 12) & 1) * 255) as u8,
-            (((data >> 11) & 1) * 255) as u8,
-            (((data >> 10) & 1) * 255) as u8,
-            (((data >> 9) & 1) * 255) as u8,
-            (((data >> 8) & 1) * 255) as u8,
-            (((data >> 7) & 1) * 255) as u8,
-            (((data >> 6) & 1) * 255) as u8,
-        ])
-        .unwrap();
+        buf.write_u8(LED_REPORT_ID).unwrap();
+        buf.write_u8(LED_COMMAND).unwrap();
+        
+        // Convert bit flags to LED brightness values
+        let led_data: Vec<u8> = LED_BIT_POSITIONS
+            .iter()
+            .map(|&pos| extract_led_bit(data, pos))
+            .collect();
+        buf.write_all(&led_data).unwrap();
 
         if let Err(e) = device.write(buf.get_ref()) {
             println!("Ongeki IO HID: 设备断开 {e}");
@@ -224,20 +236,27 @@ impl LEDriverNew for HidIO {
                 return;
             };
     
-            let mut buf = Cursor::new([0u8; 65]);
+            // Validate we have enough RGB data
+            // Note: rgb is an array of RGB8 structs (not individual color components),
+            // so we need LED_COUNT_BOARD_1 elements in the array (not LED_COUNT_BOARD_1 * 3)
+            if rgb.len() < LED_COUNT_BOARD_1 {
+                eprintln!(
+                    "Ongeki IO HID: Warning - Insufficient RGB LED data. Expected {} LEDs, got {}",
+                    LED_COUNT_BOARD_1,
+                    rgb.len()
+                );
+                return;
+            }
+
+            let mut buf = Cursor::new([0u8; HID_REPORT_SIZE]);
             buf.set_position(1);
-            buf.write_u8(0).unwrap();
-            buf.write_u8(100).unwrap();
-            buf.write_all(
-                &[
-                    rgb[0].r, rgb[0].g, rgb[0].b,
-                    rgb[1].r, rgb[1].g, rgb[1].b,
-                    rgb[2].r, rgb[2].g, rgb[2].b,
-                    rgb[3].r, rgb[3].g, rgb[3].b,
-                    rgb[4].r, rgb[4].g, rgb[4].b,
-                    rgb[5].r, rgb[5].g, rgb[5].b
-                ],
-            ).unwrap();
+            buf.write_u8(LED_REPORT_ID).unwrap();
+            buf.write_u8(LED_COMMAND).unwrap();
+            
+            // Write RGB data for board 1 (6 LEDs = 18 bytes)
+            for i in 0..LED_COUNT_BOARD_1 {
+                buf.write_all(&[rgb[i].r, rgb[i].g, rgb[i].b]).unwrap();
+            }
 
             if let Err(e) = device.write(buf.get_ref()) {
                 println!("Ongeki IO HID: 设备断开 {e}");
