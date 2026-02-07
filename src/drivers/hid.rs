@@ -237,6 +237,8 @@ impl LEDriverNew for HidIO {
             };
     
             // Validate we have enough RGB data
+            // Note: rgb is an array of RGB8 structs (not individual color components),
+            // so we need LED_COUNT_BOARD_1 elements in the array (not LED_COUNT_BOARD_1 * 3)
             if rgb.len() < LED_COUNT_BOARD_1 {
                 eprintln!(
                     "Ongeki IO HID: Warning - Insufficient RGB LED data. Expected {} LEDs, got {}",

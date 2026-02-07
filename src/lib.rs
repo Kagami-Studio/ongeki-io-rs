@@ -79,7 +79,7 @@ pub extern "C" fn mu3_io_poll() -> HResult {
 
 #[no_mangle]
 /// Get the state of operator buttons (test, service, coin)
-/// 
+///
 /// # Arguments
 /// * `option_btns` - Pointer to u8 that will receive the button state bitmap
 pub extern "C" fn mu3_io_get_opbtns(option_btns: *mut u8) {
@@ -91,7 +91,7 @@ pub extern "C" fn mu3_io_get_opbtns(option_btns: *mut u8) {
 
 #[no_mangle]
 /// Get the state of game buttons for both sides
-/// 
+///
 /// # Arguments
 /// * `left` - Pointer to u8 that will receive the left side button state
 /// * `right` - Pointer to u8 that will receive the right side button state
@@ -107,7 +107,7 @@ pub extern "C" fn mu3_io_get_gamebtns(left: *mut u8, right: *mut u8) {
 
 #[no_mangle]
 /// Get the current lever position
-/// 
+///
 /// # Arguments
 /// * `pos` - Pointer to i16 that will receive the lever position (-32768 to 32767)
 pub extern "C" fn mu3_io_get_lever(pos: *mut i16) {
@@ -128,7 +128,7 @@ pub extern "C" fn mu3_io_led_init() -> HResult {
 
 #[no_mangle]
 /// Set LED state using legacy bit-field format
-/// 
+///
 /// # Arguments
 /// * `data` - 32-bit value containing LED on/off states
 pub extern "C" fn mu3_io_set_led(data: u32) {
