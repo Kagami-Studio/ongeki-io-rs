@@ -230,13 +230,19 @@ impl LEDriverNew for HidIO {
                 return;
             };
     
+            // Validate we have enough RGB data
+            if rgb.len() < LED_COUNT_BOARD_1 {
+                eprintln!("Ongeki IO HID: 警告 - RGB 数据不足，期望 {} 个，实际 {}", LED_COUNT_BOARD_1, rgb.len());
+                return;
+            }
+
             let mut buf = Cursor::new([0u8; HID_REPORT_SIZE]);
             buf.set_position(1);
             buf.write_u8(LED_REPORT_ID).unwrap();
             buf.write_u8(LED_COMMAND).unwrap();
             
             // Write RGB data for board 1 (6 LEDs = 18 bytes)
-            for i in 0..LED_COUNT_BOARD_1.min(rgb.len()) {
+            for i in 0..LED_COUNT_BOARD_1 {
                 buf.write_all(&[rgb[i].r, rgb[i].g, rgb[i].b]).unwrap();
             }
 

@@ -25,7 +25,8 @@ impl LEDriver for LEDebug {
         for (i, &pos) in LED_BIT_POSITIONS.iter().enumerate() {
             let value = if (data >> pos) & 1 == 1 { 255 } else { 0 };
             print!("{} ", value);
-            if (i + 1) % 3 == 0 {
+            // Add comma separator after every 3 values, except after the last one
+            if (i + 1) % 3 == 0 && i + 1 < LED_BIT_POSITIONS.len() {
                 print!(", ");
             }
         }
